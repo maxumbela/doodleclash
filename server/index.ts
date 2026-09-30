@@ -9,7 +9,13 @@ import { gameManager, Room } from './gameManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const distPath = path.join(__dirname, '../dist');
+const candidateDistPaths = [
+  path.join(process.cwd(), 'dist'),
+  path.join(__dirname, '../dist'),
+  path.join(__dirname, 'dist')
+];
+const distPath = candidateDistPaths.find(p => fs.existsSync(p)) || candidateDistPaths[0];
+console.log('📦 Frontend static build path resolved to:', distPath, '(Exists:', fs.existsSync(distPath), ')');
 
 const app = express();
 app.use(cors());
@@ -327,12 +333,16 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
-}
+app.use(express.static(path.join(process.cwd(), 'dist')));
+app.use(express.static(distPath));
+
+app.get('*', (req, res) => {
+  const activeDist = candidateDistPaths.find(p => fs.existsSync(path.join(p, 'index.html')));
+  if (activeDist) {
+    return res.sendFile(path.join(activeDist, 'index.html'));
+  }
+  res.status(500).send('Frontend bundle not found. Please ensure npm run build was executed.');
+});
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
