@@ -219,7 +219,8 @@ wss.on('connection', (ws) => {
 
 
         case 'join_room': {
-          const result = gameManager.joinRoom(socketId, msg.roomId, msg.name, msg.avatar);
+          const cleanRoomId = String(msg.roomId || '').trim();
+          const result = gameManager.joinRoom(socketId, cleanRoomId, msg.name, msg.avatar);
           if (!result.success || !result.room) {
             ws.send(JSON.stringify({
               type: 'error',

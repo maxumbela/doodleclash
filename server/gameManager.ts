@@ -36,6 +36,10 @@ export class GameManager {
   }
 
   public createRoom(socketId: string, playerName: string, avatar: string, initialSettings?: Partial<RoomSettings>): Room {
+    if (this.socketToRoom.has(socketId)) {
+      this.removeSocket(socketId);
+    }
+
     const roomId = this.generateRoomCode();
     
     const settings: RoomSettings = {
@@ -82,7 +86,16 @@ export class GameManager {
 
 
   public joinRoom(socketId: string, roomId: string, playerName: string, avatar: string): { success: boolean; message?: string; room?: Room } {
-    const room = this.rooms.get(roomId);
+    const cleanRoomId = String(roomId || '').trim();
+
+    if (this.socketToRoom.has(socketId)) {
+      const prevRoomId = this.socketToRoom.get(socketId);
+      if (prevRoomId !== cleanRoomId) {
+        this.removeSocket(socketId);
+      }
+    }
+
+    const room = this.rooms.get(cleanRoomId);
     if (!room) {
       return { success: false, message: 'Room not found. Check 4-digit code.' };
     }
@@ -105,7 +118,7 @@ export class GameManager {
     };
 
     room.players[socketId] = guestPlayer;
-    this.socketToRoom.set(socketId, roomId);
+    this.socketToRoom.set(socketId, cleanRoomId);
 
     return { success: true, room };
   }

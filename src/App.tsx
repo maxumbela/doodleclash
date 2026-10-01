@@ -22,6 +22,10 @@ export const App: React.FC = () => {
   const [isWebRTCConnected, setIsWebRTCConnected] = useState<boolean>(false);
   const [isAudioOn, setIsAudioOn] = useState<boolean>(true);
 
+  const [initialRoomCode, setInitialRoomCode] = useState<string>('');
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [isJoining, setIsJoining] = useState<boolean>(false);
+
   // Drawing tools state
   const [tool, setTool] = useState<ToolType>('brush');
   const [color, setColor] = useState<string>('#ef4444');
@@ -38,8 +42,11 @@ export const App: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const codeParam = params.get('room');
-    if (codeParam && codeParam.length === 4) {
-      // Room code available in URL
+    if (codeParam) {
+      const clean = codeParam.trim().replace(/\D/g, '').slice(0, 4);
+      if (clean.length === 4) {
+        setInitialRoomCode(clean);
+      }
     }
   }, []);
 
@@ -50,6 +57,8 @@ export const App: React.FC = () => {
     });
 
     const unsubRoom = network.on('room_update', (newRoom: RoomState) => {
+      setIsJoining(false);
+      setJoinError(null);
       setRoom(newRoom);
       if (newRoom.phase === 'ROUND_COUNTDOWN') {
         hasSubmittedCurrentRound.current = false;
@@ -59,6 +68,12 @@ export const App: React.FC = () => {
       if (newRoom.phase === 'DRAWING' && hasSubmittedCurrentRound.current) {
         hasSubmittedCurrentRound.current = false;
       }
+    });
+
+    const unsubError = network.on('error', (err: string) => {
+      setIsJoining(false);
+      setJoinError(err || 'Failed to join room. Please check 4-digit code.');
+      sounds.playBuzzer();
     });
 
     const unsubWebRTC = network.on('webrtc_connected', (connected: boolean) => {
@@ -84,6 +99,7 @@ export const App: React.FC = () => {
     return () => {
       unsubId();
       unsubRoom();
+      unsubError();
       unsubWebRTC();
       unsubTimer();
       unsubRequestSubmit();
@@ -113,6 +129,7 @@ export const App: React.FC = () => {
   };
 
   const handleHostRoom = (name: string, avatar: string, settings?: any) => {
+    setJoinError(null);
     network.createRoom(name, avatar, settings);
   };
 
@@ -121,6 +138,8 @@ export const App: React.FC = () => {
   };
 
   const handleJoinRoom = (roomId: string, name: string, avatar: string) => {
+    setIsJoining(true);
+    setJoinError(null);
     network.joinRoom(roomId, name, avatar);
   };
 
@@ -168,6 +187,10 @@ export const App: React.FC = () => {
           onJoinRoom={handleJoinRoom}
           isAudioOn={isAudioOn}
           onToggleAudio={toggleAudio}
+          initialRoomCode={initialRoomCode}
+          joinError={joinError}
+          onClearError={() => setJoinError(null)}
+          isJoining={isJoining}
         />
       ) : room.phase === 'WAITING' ? (
         <WaitingRoom

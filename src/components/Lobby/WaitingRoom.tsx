@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, ShieldCheck, Zap, ArrowLeft, SlidersHorizontal, Clock, Trophy, Shapes } from 'lucide-react';
+import { Copy, Check, ShieldCheck, Zap, ArrowLeft, SlidersHorizontal, Clock, Trophy, Shapes, Link } from 'lucide-react';
 import { Player, RoomSettings, RoomState } from '../../types/game';
 import { sounds } from '../../services/audio';
 
@@ -32,6 +32,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
   onLeave,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const myPlayer = room.players[myId];
@@ -53,6 +54,14 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
     navigator.clipboard.writeText(room.roomId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyLink = () => {
+    sounds.playPop();
+    const link = `${window.location.origin}${window.location.pathname}?room=${room.roomId}`;
+    navigator.clipboard.writeText(link);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   const handleSettingChange = (patch: Partial<RoomSettings>) => {
@@ -103,8 +112,17 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
             {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
           </div>
         </div>
+
+        <button
+          onClick={copyLink}
+          className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-[11px] font-bold text-slate-300 hover:text-white transition border border-purple-500/30 cursor-pointer active:scale-95"
+        >
+          {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Link className="w-3.5 h-3.5 text-purple-400" />}
+          <span>{copiedLink ? 'Invite Link Copied!' : 'Copy Direct Invite Link'}</span>
+        </button>
+
         <p className="text-[10px] text-slate-400">
-          Share this 4-digit code with your challenger to start!
+          Share this 4-digit code or direct link with your challenger to start!
         </p>
       </div>
 

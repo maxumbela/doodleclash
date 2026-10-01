@@ -10,6 +10,7 @@ class NetworkManager {
   public currentRoom: RoomState | null = null;
   public isWebRTCConnected: boolean = false;
 
+  private messageQueue: string[] = [];
   private listeners: Map<string, Set<EventListener>> = new Map();
 
   constructor() {
@@ -19,8 +20,9 @@ class NetworkManager {
   private initWebSocket() {
     const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
     const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-    // If running in Vite dev with proxy on port 3000, target 3001 or /ws proxy
-    const wsUrl = typeof window !== 'undefined' && window.location.port === '3000'
+    // If running in Vite dev with proxy on port 3000 or 5173, target 3001 or /ws proxy
+    const isDevPort = typeof window !== 'undefined' && (window.location.port === '3000' || window.location.port === '5173');
+    const wsUrl = isDevPort
       ? `${isHttps ? 'wss:' : 'ws:'}//${host}:3001`
       : `${isHttps ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
 
@@ -30,6 +32,7 @@ class NetworkManager {
       this.ws.onopen = () => {
         console.log('⚡ Connected to signaling server');
         this.emit('ws_connected', true);
+        this.flushMessageQueue();
       };
 
       this.ws.onmessage = (event) => {
@@ -52,6 +55,40 @@ class NetworkManager {
       };
     } catch (e) {
       console.error('Error instantiating WebSocket:', e);
+    }
+  }
+
+  public sendWs(payload: object) {
+    const raw = JSON.stringify(payload);
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try {
+        this.ws.send(raw);
+      } catch (err) {
+        console.warn('Error sending WebSocket message, buffering:', err);
+        this.messageQueue.push(raw);
+      }
+    } else {
+      console.log('WebSocket not open yet (state:', this.ws?.readyState, '), buffering payload:', payload);
+      this.messageQueue.push(raw);
+      if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
+        this.initWebSocket();
+      }
+    }
+  }
+
+  private flushMessageQueue() {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    while (this.messageQueue.length > 0) {
+      const msg = this.messageQueue.shift();
+      if (msg) {
+        try {
+          this.ws.send(msg);
+        } catch (err) {
+          console.error('Error sending buffered WS message:', err);
+          this.messageQueue.unshift(msg);
+          break;
+        }
+      }
     }
   }
 
@@ -296,49 +333,50 @@ class NetworkManager {
   }
 
   public createRoom(name: string, avatar: string, settings?: any) {
-    this.ws?.send(JSON.stringify({
+    this.sendWs({
       type: 'create_room',
       name,
       avatar,
       settings
-    }));
+    });
   }
 
   public updateRoomSettings(settings: any) {
-    this.ws?.send(JSON.stringify({
+    this.sendWs({
       type: 'update_room_settings',
       settings
-    }));
+    });
   }
 
   public joinRoom(roomId: string, name: string, avatar: string) {
-    this.ws?.send(JSON.stringify({
+    const cleanRoomId = String(roomId || '').trim();
+    this.sendWs({
       type: 'join_room',
-      roomId,
+      roomId: cleanRoomId,
       name,
       avatar
-    }));
+    });
   }
 
   public setReady(ready: boolean) {
-    this.ws?.send(JSON.stringify({
+    this.sendWs({
       type: 'set_ready',
       ready
-    }));
+    });
   }
 
   public submitDrawing(drawingDataUrl: string, accuracy: number) {
-    this.ws?.send(JSON.stringify({
+    this.sendWs({
       type: 'submit_drawing',
       drawingDataUrl,
       accuracy
-    }));
+    });
   }
 
   public requestRematch() {
-    this.ws?.send(JSON.stringify({
+    this.sendWs({
       type: 'rematch'
-    }));
+    });
   }
 
   // --- Simple Event Pub/Sub ---
