@@ -8,6 +8,7 @@ interface TopHUDProps {
   totalRounds: number;
   prompt: PromptItem | null;
   timerSeconds: number;
+  maxTimerSeconds?: number;
   myPlayer: Player;
   opponentPlayer: Player | undefined;
   layoutMode: 'split' | 'pip';
@@ -19,6 +20,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
   totalRounds,
   prompt,
   timerSeconds,
+  maxTimerSeconds = 45,
   myPlayer,
   opponentPlayer,
   layoutMode,
@@ -26,6 +28,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
 }) => {
   const isUrgent = timerSeconds <= 5;
   const isWarning = timerSeconds <= 15 && timerSeconds > 5;
+  const progressPercent = Math.min(100, Math.max(0, (timerSeconds / maxTimerSeconds) * 100));
 
   return (
     <div className="w-full flex flex-col gap-1.5 px-3 pt-2 pb-1 select-none flex-shrink-0 z-20">
@@ -55,7 +58,7 @@ export const TopHUD: React.FC<TopHUDProps> = ({
             sounds.playPop();
             onToggleLayout();
           }}
-          className="px-2.5 py-1 rounded-xl glass-panel text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 active:scale-95 transition"
+          className="px-2.5 py-1 rounded-xl glass-panel text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 active:scale-95 transition cursor-pointer"
           title="Toggle Canvas View"
         >
           {layoutMode === 'split' ? (
@@ -72,6 +75,20 @@ export const TopHUD: React.FC<TopHUDProps> = ({
         </button>
       </div>
 
+      {/* Dynamic Timer Progress Bar */}
+      <div className="w-full h-1 bg-slate-800/80 rounded-full overflow-hidden shadow-inner">
+        <div
+          className={`h-full transition-all duration-1000 ease-linear rounded-full ${
+            isUrgent
+              ? 'bg-rose-500 shadow-sm shadow-rose-500/80'
+              : isWarning
+              ? 'bg-amber-500 shadow-sm shadow-amber-500/80'
+              : 'bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-400'
+          }`}
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+
       {/* Target Prompt Banner */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-900/40 via-indigo-900/50 to-pink-900/40 border border-purple-500/30 p-2 shadow-lg flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -79,9 +96,16 @@ export const TopHUD: React.FC<TopHUDProps> = ({
             {prompt?.emoji || '🎯'}
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-pink-400">
-              DRAW THIS
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-pink-400">
+                DRAW THIS
+              </span>
+              {prompt?.category && (
+                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-purple-950/80 text-purple-300 border border-purple-800/50 font-bold uppercase">
+                  {prompt.category}
+                </span>
+              )}
+            </div>
             <span className="text-base font-black text-white leading-tight font-display tracking-wide">
               {prompt?.title || 'Mystery Challenge'}
             </span>
@@ -117,3 +141,4 @@ export const TopHUD: React.FC<TopHUDProps> = ({
     </div>
   );
 };
+

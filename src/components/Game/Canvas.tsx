@@ -85,7 +85,21 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         if (canvas && ctx && history.current[historyIndex.current]) {
-          ctx.putImageData(history.current[historyIndex.current], 0, 0);
+          const target = history.current[historyIndex.current];
+          if (target.width === canvas.width && target.height === canvas.height) {
+            ctx.putImageData(target, 0, 0);
+          } else {
+            const temp = document.createElement('canvas');
+            temp.width = target.width;
+            temp.height = target.height;
+            const tCtx = temp.getContext('2d');
+            if (tCtx) {
+              tCtx.putImageData(target, 0, 0);
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(temp, 0, 0, canvas.width, canvas.height);
+            }
+          }
           updateHistoryState();
           network.sendDrawingEvent({ type: 'canvas_undo', historyIndex: historyIndex.current });
         }
@@ -97,7 +111,21 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         if (canvas && ctx && history.current[historyIndex.current]) {
-          ctx.putImageData(history.current[historyIndex.current], 0, 0);
+          const target = history.current[historyIndex.current];
+          if (target.width === canvas.width && target.height === canvas.height) {
+            ctx.putImageData(target, 0, 0);
+          } else {
+            const temp = document.createElement('canvas');
+            temp.width = target.width;
+            temp.height = target.height;
+            const tCtx = temp.getContext('2d');
+            if (tCtx) {
+              tCtx.putImageData(target, 0, 0);
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(temp, 0, 0, canvas.width, canvas.height);
+            }
+          }
           updateHistoryState();
           network.sendDrawingEvent({ type: 'canvas_undo', historyIndex: historyIndex.current });
         }
@@ -107,7 +135,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     canRedo: historyIndex.current < history.current.length - 1
   }));
 
-  // Setup initial canvas
+  // Setup initial canvas with ResizeObserver for PiP and split mode switches
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -121,12 +149,18 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       const height = Math.floor(rect.height * dpr);
 
       if (canvas.width !== width || canvas.height !== height) {
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        if (tempCtx && canvas.width > 0) {
-          tempCtx.drawImage(canvas, 0, 0);
+        const prevWidth = canvas.width;
+        const prevHeight = canvas.height;
+
+        let tempCanvas: HTMLCanvasElement | null = null;
+        if (prevWidth > 0 && prevHeight > 0) {
+          tempCanvas = document.createElement('canvas');
+          tempCanvas.width = prevWidth;
+          tempCanvas.height = prevHeight;
+          const tempCtx = tempCanvas.getContext('2d');
+          if (tempCtx) {
+            tempCtx.drawImage(canvas, 0, 0);
+          }
         }
 
         canvas.width = width;
@@ -135,18 +169,31 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         if (ctx) {
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, width, height);
-          if (tempCanvas.width > 0) {
+          if (tempCanvas && tempCanvas.width > 0 && tempCanvas.height > 0) {
             ctx.drawImage(tempCanvas, 0, 0, width, height);
+          } else {
+            saveState();
           }
-          saveState();
         }
       }
     };
 
     resize();
+    const ro = new ResizeObserver(() => {
+      resize();
+    });
+    ro.observe(canvas);
+    if (canvas.parentElement) {
+      ro.observe(canvas.parentElement);
+    }
     window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', resize);
+    };
   }, []);
+
 
   const getNormCoord = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;

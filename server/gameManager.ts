@@ -1,4 +1,4 @@
-import { GamePhase, Player, PromptItem, RoomState } from '../src/types/game.js';
+import { GamePhase, Player, PromptItem, RoomSettings, RoomState } from '../src/types/game.js';
 import { PROMPTS, getRandomPrompts } from '../src/data/prompts.js';
 
 export interface Room {
@@ -10,6 +10,7 @@ export interface Room {
   currentPrompt: PromptItem | null;
   timerSeconds: number;
   timerInterval: NodeJS.Timeout | null;
+  settings: RoomSettings;
   players: {
     [socketId: string]: Player;
   };
@@ -34,9 +35,16 @@ export class GameManager {
     return code;
   }
 
-  public createRoom(socketId: string, playerName: string, avatar: string): Room {
+  public createRoom(socketId: string, playerName: string, avatar: string, initialSettings?: Partial<RoomSettings>): Room {
     const roomId = this.generateRoomCode();
-    const promptList = getRandomPrompts(5);
+    
+    const settings: RoomSettings = {
+      roundDuration: initialSettings?.roundDuration || 45,
+      totalRounds: initialSettings?.totalRounds || 5,
+      category: initialSettings?.category || 'all'
+    };
+
+    const promptList = getRandomPrompts(settings.totalRounds, settings.category);
 
     const hostPlayer: Player = {
       id: socketId,
@@ -54,11 +62,12 @@ export class GameManager {
       id: roomId,
       phase: 'WAITING',
       currentRound: 0,
-      totalRounds: 5,
+      totalRounds: settings.totalRounds,
       promptList,
       currentPrompt: null,
-      timerSeconds: 45,
+      timerSeconds: settings.roundDuration,
       timerInterval: null,
+      settings,
       players: {
         [socketId]: hostPlayer
       },
@@ -70,6 +79,7 @@ export class GameManager {
     this.socketToRoom.set(socketId, roomId);
     return room;
   }
+
 
   public joinRoom(socketId: string, roomId: string, playerName: string, avatar: string): { success: boolean; message?: string; room?: Room } {
     const room = this.rooms.get(roomId);
@@ -140,6 +150,37 @@ export class GameManager {
     return { roomId, room, wasEmpty: false };
   }
 
+  public updateSettings(roomId: string, socketId: string, newSettings: Partial<RoomSettings>): Room | undefined {
+    const room = this.rooms.get(roomId);
+    if (!room) return undefined;
+
+    // Only host can modify room settings
+    const player = room.players[socketId];
+    if (!player || !player.isHost) return undefined;
+
+    // Only allow changing settings in WAITING phase
+    if (room.phase !== 'WAITING') return undefined;
+
+    if (newSettings.roundDuration !== undefined && newSettings.roundDuration > 0) {
+      room.settings.roundDuration = Math.min(180, Math.max(15, newSettings.roundDuration));
+      room.timerSeconds = room.settings.roundDuration;
+    }
+
+    if (newSettings.totalRounds !== undefined && newSettings.totalRounds > 0) {
+      room.settings.totalRounds = Math.min(10, Math.max(1, newSettings.totalRounds));
+      room.totalRounds = room.settings.totalRounds;
+    }
+
+    if (newSettings.category !== undefined) {
+      room.settings.category = newSettings.category;
+    }
+
+    // Refresh prompt list based on new total rounds and category
+    room.promptList = getRandomPrompts(room.totalRounds, room.settings.category);
+
+    return room;
+  }
+
   public serializeRoom(room: Room): RoomState {
     return {
       roomId: room.id,
@@ -148,6 +189,7 @@ export class GameManager {
       totalRounds: room.totalRounds,
       currentPrompt: room.currentPrompt,
       timerSeconds: room.timerSeconds,
+      settings: room.settings,
       players: room.players,
       roundWinnerId: room.roundWinnerId,
       overallWinnerId: room.overallWinnerId
@@ -165,11 +207,11 @@ export class GameManager {
 
     room.currentRound = 0;
     room.phase = 'WAITING';
-    room.promptList = getRandomPrompts(5);
+    room.promptList = getRandomPrompts(room.totalRounds, room.settings.category);
     room.currentPrompt = null;
     room.roundWinnerId = null;
     room.overallWinnerId = null;
-    room.timerSeconds = 45;
+    room.timerSeconds = room.settings.roundDuration;
 
     for (const pId in room.players) {
       room.players[pId].score = 0;
@@ -181,6 +223,7 @@ export class GameManager {
 
     return room;
   }
+
 }
 
 export const gameManager = new GameManager();

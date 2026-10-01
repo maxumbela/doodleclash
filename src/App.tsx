@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RoomState, ToolType } from './types/game';
+import { RoomSettings, RoomState, ToolType } from './types/game';
 import { network } from './services/webrtc';
+
 import { sounds } from './services/audio';
 import { DrawingEvaluator } from './services/evaluator';
 
@@ -111,8 +112,12 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleHostRoom = (name: string, avatar: string) => {
-    network.createRoom(name, avatar);
+  const handleHostRoom = (name: string, avatar: string, settings?: any) => {
+    network.createRoom(name, avatar, settings);
+  };
+
+  const handleUpdateSettings = (settings: Partial<RoomSettings>) => {
+    network.updateRoomSettings(settings);
   };
 
   const handleJoinRoom = (roomId: string, name: string, avatar: string) => {
@@ -170,6 +175,7 @@ export const App: React.FC = () => {
           myId={myId}
           isWebRTCConnected={isWebRTCConnected}
           onToggleReady={handleToggleReady}
+          onUpdateSettings={handleUpdateSettings}
           onLeave={handleLeave}
         />
       ) : (
@@ -178,14 +184,16 @@ export const App: React.FC = () => {
           {/* Top HUD with round, prompt, countdown & score */}
           <TopHUD
             currentRound={room.currentRound}
-            totalRounds={room.totalRounds}
+            totalRounds={room.settings?.totalRounds || room.totalRounds}
             prompt={room.currentPrompt}
             timerSeconds={room.timerSeconds}
+            maxTimerSeconds={room.settings?.roundDuration || 45}
             myPlayer={myPlayer}
             opponentPlayer={opponentPlayer}
             layoutMode={layoutMode}
             onToggleLayout={() => setLayoutMode(prev => prev === 'split' ? 'pip' : 'split')}
           />
+
 
           {/* Dual Canvas: Opponent Live Canvas (Upper) + Own Interactive Canvas (Down) */}
           <DualCanvas

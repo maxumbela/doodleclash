@@ -96,11 +96,13 @@ class NetworkManager {
       case 'drawing_phase_started':
       case 'round_showcase_started':
       case 'player_ready_state':
+      case 'room_settings_updated':
       case 'rematch_started':
       case 'game_over':
         this.currentRoom = msg.room;
         this.emit('room_update', msg.room);
         break;
+
 
       case 'timer_tick':
         this.emit('timer_tick', { phase: msg.phase, seconds: msg.timerSeconds });
@@ -293,11 +295,19 @@ class NetworkManager {
     }
   }
 
-  public createRoom(name: string, avatar: string) {
+  public createRoom(name: string, avatar: string, settings?: any) {
     this.ws?.send(JSON.stringify({
       type: 'create_room',
       name,
-      avatar
+      avatar,
+      settings
+    }));
+  }
+
+  public updateRoomSettings(settings: any) {
+    this.ws?.send(JSON.stringify({
+      type: 'update_room_settings',
+      settings
     }));
   }
 

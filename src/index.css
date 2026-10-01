@@ -20,18 +20,18 @@ body {
 
 /* Glassmorphism helpers */
 .glass-panel {
-  background: rgba(18, 20, 36, 0.75);
+  background: rgba(14, 18, 36, 0.75);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-panel-glow {
-  background: rgba(18, 20, 36, 0.85);
+  background: rgba(14, 18, 36, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(139, 92, 246, 0.3);
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.2);
 }
 
 .neon-border-pink {
@@ -49,6 +49,28 @@ body {
   border-color: rgba(250, 204, 21, 0.7);
 }
 
+/* Custom Scrollbar for horizontal selectors */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.7);
+}
+
+/* Cursor pointer on all interactive controls */
+button, select, input[type="range"], input[type="radio"], input[type="checkbox"] {
+  cursor: pointer;
+}
+
 /* Touch prevention on canvas */
 canvas {
   touch-action: none;
@@ -64,8 +86,9 @@ canvas {
     90deg,
     rgba(255, 0, 0, 0.03),
     rgba(0, 255, 0, 0.01),
-    rgba(0, 0, 255, 0.03)
+    rgba(0, 255, 0, 0.03)
   );
   background-size: 100% 3px, 6px 100%;
   pointer-events: none;
 }
+

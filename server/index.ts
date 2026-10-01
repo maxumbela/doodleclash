@@ -78,7 +78,8 @@ function startRoundCountdown(room: Room) {
 
 function startActiveDrawing(room: Room) {
   room.phase = 'DRAWING';
-  room.timerSeconds = 45; // 45 seconds drawing battle
+  room.timerSeconds = room.settings?.roundDuration || 45; // Host customized drawing duration
+
 
   broadcastToRoom(room.id, {
     type: 'drawing_phase_started',
@@ -192,7 +193,7 @@ wss.on('connection', (ws) => {
 
       switch (msg.type) {
         case 'create_room': {
-          const room = gameManager.createRoom(socketId, msg.name, msg.avatar);
+          const room = gameManager.createRoom(socketId, msg.name, msg.avatar, msg.settings);
           ws.send(JSON.stringify({
             type: 'room_created',
             roomId: room.id,
@@ -201,6 +202,21 @@ wss.on('connection', (ws) => {
           }));
           break;
         }
+
+        case 'update_room_settings': {
+          const room = gameManager.getRoomBySocket(socketId);
+          if (room) {
+            const updated = gameManager.updateSettings(room.id, socketId, msg.settings);
+            if (updated) {
+              broadcastToRoom(room.id, {
+                type: 'room_settings_updated',
+                room: gameManager.serializeRoom(updated)
+              });
+            }
+          }
+          break;
+        }
+
 
         case 'join_room': {
           const result = gameManager.joinRoom(socketId, msg.roomId, msg.name, msg.avatar);

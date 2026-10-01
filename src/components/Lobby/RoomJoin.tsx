@@ -3,7 +3,7 @@ import { Sparkles, Gamepad2, Volume2, VolumeX, ArrowRight, Palette } from 'lucid
 import { sounds } from '../../services/audio';
 
 interface RoomJoinProps {
-  onHostRoom: (name: string, avatar: string) => void;
+  onHostRoom: (name: string, avatar: string, settings?: any) => void;
   onJoinRoom: (roomId: string, name: string, avatar: string) => void;
   isAudioOn: boolean;
   onToggleAudio: () => void;
@@ -22,11 +22,20 @@ export const RoomJoin: React.FC<RoomJoinProps> = ({
   const [selectedAvatar, setSelectedAvatar] = useState('🐱');
   const [roomCode, setRoomCode] = useState('');
 
+  // Host customization presets
+  const [roundDuration, setRoundDuration] = useState<number>(45);
+  const [totalRounds, setTotalRounds] = useState<number>(5);
+  const [category, setCategory] = useState<string>('all');
+
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     sounds.playPop();
     const finalName = name.trim() || `Artist ${Math.floor(100 + Math.random() * 900)}`;
-    onHostRoom(finalName, selectedAvatar);
+    onHostRoom(finalName, selectedAvatar, {
+      roundDuration,
+      totalRounds,
+      category
+    });
   };
 
   const handleJoin = (e: React.FormEvent) => {
@@ -149,24 +158,85 @@ export const RoomJoin: React.FC<RoomJoinProps> = ({
         </div>
 
         {tab === 'create' ? (
-          /* Create Room Section */
-          <div className="flex flex-col gap-3 py-2">
-            <div className="p-3.5 rounded-2xl bg-purple-950/30 border border-purple-800/40 text-xs text-purple-200 flex items-start gap-2.5">
-              <Sparkles className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
-              <span>
-                Host a 5-round real-time battle. You will get a 4-digit code to invite your opponent!
+          /* Create Room Section with Host Options */
+          <div className="flex flex-col gap-3 py-1">
+            {/* Quick Rules Setup */}
+            <div className="p-3 rounded-2xl bg-slate-900/70 border border-purple-500/30 flex flex-col gap-2">
+              <span className="text-[10px] font-black tracking-wider text-purple-400 uppercase flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" />
+                Customize Arena Match Rules
               </span>
+
+              {/* Time Selector */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400 text-[11px]">Round Timer:</span>
+                <div className="flex gap-1">
+                  {[30, 45, 60, 90].map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setRoundDuration(s)}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition ${
+                        roundDuration === s
+                          ? 'bg-purple-600 text-white shadow'
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {s}s
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rounds Selector */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400 text-[11px]">Total Rounds:</span>
+                <div className="flex gap-1">
+                  {[3, 5, 7].map(r => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setTotalRounds(r)}
+                      className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition ${
+                        totalRounds === r
+                          ? 'bg-amber-600 text-white shadow'
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Category Selector */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400 text-[11px]">Category:</span>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="bg-slate-800 border border-slate-700 text-slate-200 text-[11px] rounded-lg px-2 py-0.5 focus:outline-none focus:border-purple-500 font-semibold"
+                >
+                  <option value="all">🎨 All Themes</option>
+                  <option value="Animal">🐱 Animals</option>
+                  <option value="Food">🍕 Food</option>
+                  <option value="Vehicle">🚗 Vehicles</option>
+                  <option value="Object">👑 Objects</option>
+                  <option value="Nature">🌻 Nature</option>
+                </select>
+              </div>
             </div>
 
             <button
               onClick={handleCreate}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-500 hover:to-pink-500 text-white font-extrabold text-base tracking-wider uppercase shadow-xl shadow-pink-600/30 active:scale-95 transition flex items-center justify-center gap-2"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-500 hover:to-pink-500 text-white font-extrabold text-base tracking-wider uppercase shadow-xl shadow-pink-600/30 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <Gamepad2 className="w-5 h-5" />
-              START NEW ARENA
+              CREATE BATTLE ROOM
             </button>
           </div>
         ) : (
+
           /* Join Room via 4-Digit Code */
           <div className="flex flex-col gap-3">
             {/* 4-Digit Display */}

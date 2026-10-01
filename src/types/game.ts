@@ -113,6 +113,12 @@ export type GamePhase =
   | 'ROUND_SHOWCASE' // Cinematic showdown: side-by-side reveal & score rollout
   | 'GAME_OVER';     // 5 rounds done: Grand Champion podium & all drawings gallery
 
+export interface RoomSettings {
+  roundDuration: number; // e.g. 30, 45, 60, 90, 120 seconds
+  totalRounds: number;   // e.g. 1, 3, 5, 7 rounds
+  category: string;      // 'all' | 'Animal' | 'Food' | 'Object' | 'Nature' | 'Vehicle'
+}
+
 export interface RoomState {
   roomId: string;
   phase: GamePhase;
@@ -120,6 +126,7 @@ export interface RoomState {
   totalRounds: number;
   currentPrompt: PromptItem | null;
   timerSeconds: number;
+  settings: RoomSettings;
   players: {
     [socketId: string]: Player;
   };
@@ -134,3 +141,4 @@ export interface AccuracyBreakdown {
   colorHarmony: number;    // 0 to 100
   commentary: string;      // Fun gaming critique
 }
+

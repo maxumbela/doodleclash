@@ -27,34 +27,41 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
   onHistoryChange,
   onToggleLayout,
 }) => {
-  if (layoutMode === 'split') {
-    return (
-      <div className="flex-1 w-full px-3 py-1 flex flex-col md:flex-row gap-2 min-h-0 relative select-none">
-        {/* UPPER SIDE: Opponent's Real-time Mirror Canvas */}
-        <div className="flex-1 relative min-h-0 rounded-2xl overflow-hidden shadow-lg border-2 border-cyan-500/40 bg-slate-900">
-          <OpponentCanvas opponentPlayer={opponentPlayer} />
-        </div>
+  const isPip = layoutMode === 'pip';
 
-        {/* DOWN SIDE: Your Interactive Drawing Canvas */}
-        <div className="flex-1 relative min-h-0 rounded-2xl overflow-hidden shadow-lg border-2 border-purple-500/50 bg-slate-900">
-          <Canvas
-            ref={canvasRef}
-            tool={tool}
-            color={color}
-            size={size}
-            fillShape={fillShape}
-            onHistoryChange={onHistoryChange}
-          />
-        </div>
-      </div>
-    );
-  }
 
-  // Picture-in-Picture Mode: User canvas is full screen, opponent canvas is floating
   return (
-    <div className="flex-1 w-full px-3 py-1 flex flex-col min-h-0 relative select-none">
-      {/* Full Primary Interactive Canvas */}
-      <div className="flex-1 relative w-full h-full rounded-2xl overflow-hidden shadow-xl border-2 border-purple-500/60">
+    <div className="flex-1 w-full px-3 py-1 min-h-0 relative select-none flex flex-col md:flex-row gap-2">
+      {/* OPPONENT CANVAS CONTAINER */}
+      <div
+        onClick={isPip ? onToggleLayout : undefined}
+        className={`transition-all duration-300 rounded-2xl overflow-hidden shadow-xl ${
+          isPip
+            ? 'absolute bottom-4 right-5 z-30 w-36 h-48 sm:w-44 sm:h-56 border-2 border-cyan-400 bg-slate-950/95 shadow-2xl shadow-cyan-950/50 cursor-pointer hover:scale-105 active:scale-95 group ring-1 ring-cyan-400/50'
+            : 'flex-1 relative min-h-0 border-2 border-cyan-500/40 bg-slate-900'
+        }`}
+        title={isPip ? 'Tap to switch to Split Screen' : undefined}
+      >
+        <OpponentCanvas opponentPlayer={opponentPlayer} />
+        {isPip && (
+          <>
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors pointer-events-none" />
+            <div className="absolute bottom-1 right-1 p-1 rounded-lg bg-black/80 text-cyan-300 flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 pointer-events-none">
+              <Maximize2 className="w-3 h-3" />
+              <span>SPLIT</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* USER DRAWING CANVAS CONTAINER */}
+      <div
+        className={`transition-all duration-300 rounded-2xl overflow-hidden shadow-xl border-2 border-purple-500/50 bg-slate-900 ${
+          isPip
+            ? 'absolute inset-x-3 inset-y-1 z-10 border-purple-500/70 shadow-2xl shadow-purple-950/50'
+            : 'flex-1 relative min-h-0'
+        }`}
+      >
         <Canvas
           ref={canvasRef}
           tool={tool}
@@ -64,19 +71,7 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
           onHistoryChange={onHistoryChange}
         />
       </div>
-
-      {/* Floating Draggable / Tappable Opponent PiP Window */}
-      <div
-        onClick={onToggleLayout}
-        className="absolute bottom-4 right-5 w-32 h-44 sm:w-40 sm:h-52 rounded-2xl overflow-hidden shadow-2xl border-2 border-cyan-400 bg-slate-900/90 cursor-pointer hover:scale-105 active:scale-95 transition-all z-30 group"
-        title="Tap to switch to Split Screen"
-      >
-        <OpponentCanvas opponentPlayer={opponentPlayer} />
-        <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors pointer-events-none" />
-        <div className="absolute bottom-1 right-1 p-1 rounded-lg bg-black/70 text-cyan-300">
-          <Maximize2 className="w-3.5 h-3.5" />
-        </div>
-      </div>
     </div>
   );
 };
+

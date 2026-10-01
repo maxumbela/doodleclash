@@ -131,7 +131,19 @@ export const PROMPTS: PromptItem[] = [
   }
 ];
 
-export function getRandomPrompts(count: number = 5): PromptItem[] {
-  const shuffled = [...PROMPTS].sort(() => 0.5 - Math.random());
+export function getRandomPrompts(count: number = 5, category: string = 'all'): PromptItem[] {
+  let pool = PROMPTS;
+  if (category && category !== 'all') {
+    const filtered = PROMPTS.filter(p => p.category.toLowerCase() === category.toLowerCase());
+    if (filtered.length >= count) {
+      pool = filtered;
+    } else if (filtered.length > 0) {
+      // If category has fewer items than total rounds, include all of them and pad with others
+      const others = PROMPTS.filter(p => p.category.toLowerCase() !== category.toLowerCase());
+      pool = [...filtered, ...others];
+    }
+  }
+  const shuffled = [...pool].sort(() => 0.5 - Math.random());
   return shuffled.slice(0, count);
 }
+

@@ -12,7 +12,7 @@ export const OpponentCanvas: React.FC<OpponentCanvasProps> = ({ opponentPlayer }
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
   const cursorTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Setup initial canvas
+  // Setup initial canvas with ResizeObserver
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -26,12 +26,18 @@ export const OpponentCanvas: React.FC<OpponentCanvasProps> = ({ opponentPlayer }
       const height = Math.floor(rect.height * dpr);
 
       if (canvas.width !== width || canvas.height !== height) {
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        if (tempCtx && canvas.width > 0) {
-          tempCtx.drawImage(canvas, 0, 0);
+        const prevWidth = canvas.width;
+        const prevHeight = canvas.height;
+
+        let tempCanvas: HTMLCanvasElement | null = null;
+        if (prevWidth > 0 && prevHeight > 0) {
+          tempCanvas = document.createElement('canvas');
+          tempCanvas.width = prevWidth;
+          tempCanvas.height = prevHeight;
+          const tempCtx = tempCanvas.getContext('2d');
+          if (tempCtx) {
+            tempCtx.drawImage(canvas, 0, 0);
+          }
         }
 
         canvas.width = width;
@@ -40,7 +46,7 @@ export const OpponentCanvas: React.FC<OpponentCanvasProps> = ({ opponentPlayer }
         if (ctx) {
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, width, height);
-          if (tempCanvas.width > 0) {
+          if (tempCanvas && tempCanvas.width > 0 && tempCanvas.height > 0) {
             ctx.drawImage(tempCanvas, 0, 0, width, height);
           }
         }
@@ -48,9 +54,21 @@ export const OpponentCanvas: React.FC<OpponentCanvasProps> = ({ opponentPlayer }
     };
 
     resize();
+    const ro = new ResizeObserver(() => {
+      resize();
+    });
+    ro.observe(canvas);
+    if (canvas.parentElement) {
+      ro.observe(canvas.parentElement);
+    }
     window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', resize);
+    };
   }, []);
+
 
   // Listen for WebRTC incoming opponent events
   useEffect(() => {
